@@ -5,7 +5,7 @@
    ============================================================ */
 
 import {defer} from '@shopify/remix-oxygen';
-import {useLoaderData, Link} from '@remix-run/react';
+import {useLoaderData, Link} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import {useState} from 'react';
 

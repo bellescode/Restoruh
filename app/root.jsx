@@ -14,7 +14,7 @@ import {
   ScrollRestoration,
   useRouteLoaderData,
   Link,
-} from '@remix-run/react';
+}from 'react-router';
 import {useState} from 'react';
 import stylesheet from '~/styles/app.css?url';
 
