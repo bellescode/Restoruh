@@ -1,172 +1,131 @@
-import {redirect, useLoaderData} from 'react-router';
-import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
-import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
-import {ProductItem} from '~/components/ProductItem';
+/* ============================================================
+   FILE: app/routes/products.$handle.jsx
+   Individual product page with ingredients, dosing, FDA note
+   ============================================================ */
+import { useLoaderData, Link } from 'react-router';
+import { Image, Money, CartForm } from '@shopify/hydrogen';
 
-/**
- * @type {Route.MetaFunction}
- */
-export const meta = ({data}) => {
-  return [{title: `Hydrogen | ${data?.collection.title ?? ''} Collection`}];
-};
-
-/**
- * @param {Route.LoaderArgs} args
- */
-export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
-async function loadCriticalData({context, params, request}) {
-  const {handle} = params;
-  const {storefront} = context;
-  const paginationVariables = getPaginationVariables(request, {
-    pageBy: 8,
+export async function loader({ params, context }) {
+  const { storefront } = context;
+  const { handle } = params;
+  const { product } = await storefront.query(PRODUCT_QUERY, {
+    variables: { handle },
   });
+  if (!product) throw new Response('Product not found', { status: 404 });
 
-  if (!handle) {
-    throw redirect('/collections');
-  }
-
-  const [{collection}] = await Promise.all([
-    storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
-      // Add other queries here, so that they are loaded in parallel
-    }),
-  ]);
-
-  if (!collection) {
-    throw new Response(`Collection ${handle} not found`, {
-      status: 404,
-    });
-  }
-
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: collection});
-
-  return {
-    collection,
-  };
+  // Get the first available variant
+  const selectedVariant = product.variants?.nodes?.[0];
+  return { product, selectedVariant };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
-function loadDeferredData({context}) {
-  return {};
+export function meta({ data }) {
+  return [
+    { title: `${data?.product?.title ?? 'Product'} — RestoRuh` },
+    { name: 'description', content: data?.product?.description ?? '' },
+  ];
 }
 
-export default function Collection() {
-  /** @type {LoaderReturnData} */
-  const {collection} = useLoaderData();
+export default function ProductPage() {
+  const { product, selectedVariant } = useLoaderData();
+  const image = product.images?.nodes?.[0];
+  const price = selectedVariant?.price;
 
   return (
-    <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
-      <PaginatedResourceSection
-        connection={collection.products}
-        resourcesClassName="products-grid"
-      >
-        {({node: product, index}) => (
-          <ProductItem
-            key={product.id}
-            product={product}
-            loading={index < 8 ? 'eager' : undefined}
-          />
-        )}
-      </PaginatedResourceSection>
-      <Analytics.CollectionView
-        data={{
-          collection: {
-            id: collection.id,
-            handle: collection.handle,
-          },
-        }}
-      />
+    <div style={{ background: 'var(--cream)', minHeight: '80vh' }}>
+      <div className="container" style={{ padding: '32px 24px 80px' }}>
+
+        {/* Breadcrumb */}
+        <p className="collection-breadcrumb" style={{ marginBottom: 32 }}>
+          <Link to="/shop">Shop</Link> / {product.title}
+        </p>
+
+        <div style={{ display: 'grid', gap: 48, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
+
+          {/* Product image */}
+          <div style={{ borderRadius: 20, overflow: 'hidden', background: 'rgba(61,107,80,.06)', aspectRatio: '1', display: 'grid', placeItems: 'center' }}>
+            {image
+              ? <Image data={image} aspectRatio="1/1" sizes="(min-width:768px) 50vw, 100vw"
+                  style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+              : <img src="/images/restoruh-logo.png" alt="RestoRuh"
+                  style={{ width:120, height:120, objectFit:'contain', opacity:.2 }}/>
+            }
+          </div>
+
+          {/* Product info */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, letterSpacing:3, color:'var(--gold)', marginBottom:10, textTransform:'uppercase' }}>
+              {product.productType || 'RestoRuh'}
+            </p>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,42px)', fontWeight:600, color:'var(--green)', marginBottom:16, lineHeight:1.1 }}>
+              {product.title}
+            </h1>
+
+            {price && (
+              <p style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:600, color:'var(--green)', marginBottom:24 }}>
+                <Money data={price}/>
+              </p>
+            )}
+
+            {product.description && (
+              <p style={{ fontSize:16, color:'var(--muted)', lineHeight:1.7, marginBottom:32, maxWidth:480 }}>
+                {product.description}
+              </p>
+            )}
+
+            {/* Add to cart */}
+            {selectedVariant && (
+              <CartForm
+                route="/cart"
+                action={CartForm.ACTIONS.LinesAdd}
+                inputs={{ lines: [{ merchandiseId: selectedVariant.id, quantity: 1 }] }}
+              >
+                <button
+                  type="submit"
+                  className="btn-gold"
+                  style={{ width: '100%', justifyContent: 'center', padding: '16px 32px', fontSize: 16 }}
+                  disabled={!selectedVariant.availableForSale}
+                >
+                  {selectedVariant.availableForSale ? 'Pre-Order — Add to Cart' : 'Sold Out'}
+                </button>
+              </CartForm>
+            )}
+
+            {/* Subscription note */}
+            <p style={{ fontSize:13, color:'var(--muted)', marginTop:12, textAlign:'center' }}>
+              Subscribe and save options coming soon.
+            </p>
+
+            {/* FDA disclaimer */}
+            <div style={{ marginTop:32, padding:'16px 20px', borderRadius:12, background:'rgba(61,107,80,.06)', border:'1px solid rgba(61,107,80,.15)' }}>
+              <p style={{ fontSize:11, color:'var(--muted)', lineHeight:1.7 }}>
+                These statements have not been evaluated by the Food and Drug Administration.
+                This product is not intended to diagnose, treat, cure, or prevent any disease.
+                Consult your healthcare provider before use, especially if pregnant, nursing,
+                or giving to infants and children.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-const PRODUCT_ITEM_FRAGMENT = `#graphql
-  fragment MoneyProductItem on MoneyV2 {
-    amount
-    currencyCode
-  }
-  fragment ProductItem on Product {
-    id
-    handle
-    title
-    featuredImage {
-      id
-      altText
-      url
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        ...MoneyProductItem
-      }
-      maxVariantPrice {
-        ...MoneyProductItem
-      }
-    }
-  }
-`;
-
-// NOTE: https://shopify.dev/docs/api/storefront/2022-04/objects/collection
-const COLLECTION_QUERY = `#graphql
-  ${PRODUCT_ITEM_FRAGMENT}
-  query Collection(
-    $handle: String!
-    $country: CountryCode
-    $language: LanguageCode
-    $first: Int
-    $last: Int
-    $startCursor: String
-    $endCursor: String
-  ) @inContext(country: $country, language: $language) {
-    collection(handle: $handle) {
-      id
-      handle
-      title
-      description
-      products(
-        first: $first,
-        last: $last,
-        before: $startCursor,
-        after: $endCursor
-      ) {
+const PRODUCT_QUERY = `#graphql
+  query Product($handle: String!) {
+    product(handle: $handle) {
+      id title description handle productType
+      images(first: 3) { nodes { url altText width height } }
+      variants(first: 10) {
         nodes {
-          ...ProductItem
-        }
-        pageInfo {
-          hasPreviousPage
-          hasNextPage
-          endCursor
-          startCursor
+          id availableForSale
+          title
+          price { amount currencyCode }
+          compareAtPrice { amount currencyCode }
+          selectedOptions { name value }
         }
       }
+      priceRange { minVariantPrice { amount currencyCode } }
     }
   }
 `;
-
-/** @typedef {import('./+types/collections.$handle').Route} Route */
-/** @typedef {import('storefrontapi.generated').ProductItemFragment} ProductItemFragment */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */

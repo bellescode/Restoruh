@@ -1,243 +1,131 @@
-import {useLoaderData} from 'react-router';
-import {
-  getSelectedProductOptions,
-  Analytics,
-  useOptimisticVariant,
-  getProductOptions,
-  getAdjacentAndFirstAvailableVariants,
-  useSelectedOptionInUrlParam,
-} from '@shopify/hydrogen';
-import {ProductPrice} from '~/components/ProductPrice';
-import {ProductImage} from '~/components/ProductImage';
-import {ProductForm} from '~/components/ProductForm';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+/* ============================================================
+   FILE: app/routes/products.$handle.jsx
+   Individual product page with ingredients, dosing, FDA note
+   ============================================================ */
+import { useLoaderData, Link } from 'react-router';
+import { Image, Money, CartForm } from '@shopify/hydrogen';
 
-/**
- * @type {Route.MetaFunction}
- */
-export const meta = ({data}) => {
-  return [
-    {title: `Hydrogen | ${data?.product.title ?? ''}`},
-    {
-      rel: 'canonical',
-      href: `/products/${data?.product.handle}`,
-    },
-  ];
-};
-
-/**
- * @param {Route.LoaderArgs} args
- */
-export async function loader(args) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
-
-  return {...deferredData, ...criticalData};
-}
-
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- * @param {Route.LoaderArgs}
- */
-async function loadCriticalData({context, params, request}) {
-  const {handle} = params;
-  const {storefront} = context;
-
-  if (!handle) {
-    throw new Error('Expected product handle to be defined');
-  }
-
-  const [{product}] = await Promise.all([
-    storefront.query(PRODUCT_QUERY, {
-      variables: {handle, selectedOptions: getSelectedProductOptions(request)},
-    }),
-    // Add other queries here, so that they are loaded in parallel
-  ]);
-
-  if (!product?.id) {
-    throw new Response(null, {status: 404});
-  }
-
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: product});
-
-  return {
-    product,
-  };
-}
-
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- * @param {Route.LoaderArgs}
- */
-function loadDeferredData({context, params}) {
-  // Put any API calls that is not critical to be available on first page render
-  // For example: product reviews, product recommendations, social feeds.
-
-  return {};
-}
-
-export default function Product() {
-  /** @type {LoaderReturnData} */
-  const {product} = useLoaderData();
-
-  // Optimistically selects a variant with given available variant information
-  const selectedVariant = useOptimisticVariant(
-    product.selectedOrFirstAvailableVariant,
-    getAdjacentAndFirstAvailableVariants(product),
-  );
-
-  // Sets the search param to the selected variant without navigation
-  // only when no search params are set in the url
-  useSelectedOptionInUrlParam(selectedVariant.selectedOptions);
-
-  // Get the product options array
-  const productOptions = getProductOptions({
-    ...product,
-    selectedOrFirstAvailableVariant: selectedVariant,
+export async function loader({ params, context }) {
+  const { storefront } = context;
+  const { handle } = params;
+  const { product } = await storefront.query(PRODUCT_QUERY, {
+    variables: { handle },
   });
+  if (!product) throw new Response('Product not found', { status: 404 });
 
-  const {title, descriptionHtml} = product;
+  // Get the first available variant
+  const selectedVariant = product.variants?.nodes?.[0];
+  return { product, selectedVariant };
+}
+
+export function meta({ data }) {
+  return [
+    { title: `${data?.product?.title ?? 'Product'} — RestoRuh` },
+    { name: 'description', content: data?.product?.description ?? '' },
+  ];
+}
+
+export default function ProductPage() {
+  const { product, selectedVariant } = useLoaderData();
+  const image = product.images?.nodes?.[0];
+  const price = selectedVariant?.price;
 
   return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
-      <div className="product-main">
-        <h1>{title}</h1>
-        <ProductPrice
-          price={selectedVariant?.price}
-          compareAtPrice={selectedVariant?.compareAtPrice}
-        />
-        <br />
-        <ProductForm
-          productOptions={productOptions}
-          selectedVariant={selectedVariant}
-        />
-        <br />
-        <br />
-        <p>
-          <strong>Description</strong>
+    <div style={{ background: 'var(--cream)', minHeight: '80vh' }}>
+      <div className="container" style={{ padding: '32px 24px 80px' }}>
+
+        {/* Breadcrumb */}
+        <p className="collection-breadcrumb" style={{ marginBottom: 32 }}>
+          <Link to="/shop">Shop</Link> / {product.title}
         </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+
+        <div style={{ display: 'grid', gap: 48, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
+
+          {/* Product image */}
+          <div style={{ borderRadius: 20, overflow: 'hidden', background: 'rgba(61,107,80,.06)', aspectRatio: '1', display: 'grid', placeItems: 'center' }}>
+            {image
+              ? <Image data={image} aspectRatio="1/1" sizes="(min-width:768px) 50vw, 100vw"
+                  style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+              : <img src="/images/restoruh-logo.png" alt="RestoRuh"
+                  style={{ width:120, height:120, objectFit:'contain', opacity:.2 }}/>
+            }
+          </div>
+
+          {/* Product info */}
+          <div>
+            <p style={{ fontSize:11, fontWeight:700, letterSpacing:3, color:'var(--gold)', marginBottom:10, textTransform:'uppercase' }}>
+              {product.productType || 'RestoRuh'}
+            </p>
+            <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,42px)', fontWeight:600, color:'var(--green)', marginBottom:16, lineHeight:1.1 }}>
+              {product.title}
+            </h1>
+
+            {price && (
+              <p style={{ fontFamily:'var(--font-display)', fontSize:28, fontWeight:600, color:'var(--green)', marginBottom:24 }}>
+                <Money data={price}/>
+              </p>
+            )}
+
+            {product.description && (
+              <p style={{ fontSize:16, color:'var(--muted)', lineHeight:1.7, marginBottom:32, maxWidth:480 }}>
+                {product.description}
+              </p>
+            )}
+
+            {/* Add to cart */}
+            {selectedVariant && (
+              <CartForm
+                route="/cart"
+                action={CartForm.ACTIONS.LinesAdd}
+                inputs={{ lines: [{ merchandiseId: selectedVariant.id, quantity: 1 }] }}
+              >
+                <button
+                  type="submit"
+                  className="btn-gold"
+                  style={{ width: '100%', justifyContent: 'center', padding: '16px 32px', fontSize: 16 }}
+                  disabled={!selectedVariant.availableForSale}
+                >
+                  {selectedVariant.availableForSale ? 'Pre-Order — Add to Cart' : 'Sold Out'}
+                </button>
+              </CartForm>
+            )}
+
+            {/* Subscription note */}
+            <p style={{ fontSize:13, color:'var(--muted)', marginTop:12, textAlign:'center' }}>
+              Subscribe and save options coming soon.
+            </p>
+
+            {/* FDA disclaimer */}
+            <div style={{ marginTop:32, padding:'16px 20px', borderRadius:12, background:'rgba(61,107,80,.06)', border:'1px solid rgba(61,107,80,.15)' }}>
+              <p style={{ fontSize:11, color:'var(--muted)', lineHeight:1.7 }}>
+                These statements have not been evaluated by the Food and Drug Administration.
+                This product is not intended to diagnose, treat, cure, or prevent any disease.
+                Consult your healthcare provider before use, especially if pregnant, nursing,
+                or giving to infants and children.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-      <Analytics.ProductView
-        data={{
-          products: [
-            {
-              id: product.id,
-              title: product.title,
-              price: selectedVariant?.price.amount || '0',
-              vendor: product.vendor,
-              variantId: selectedVariant?.id || '',
-              variantTitle: selectedVariant?.title || '',
-              quantity: 1,
-            },
-          ],
-        }}
-      />
     </div>
   );
 }
 
-const PRODUCT_VARIANT_FRAGMENT = `#graphql
-  fragment ProductVariant on ProductVariant {
-    availableForSale
-    compareAtPrice {
-      amount
-      currencyCode
-    }
-    id
-    image {
-      __typename
-      id
-      url
-      altText
-      width
-      height
-    }
-    price {
-      amount
-      currencyCode
-    }
-    product {
-      title
-      handle
-    }
-    selectedOptions {
-      name
-      value
-    }
-    sku
-    title
-    unitPrice {
-      amount
-      currencyCode
-    }
-  }
-`;
-
-const PRODUCT_FRAGMENT = `#graphql
-  fragment Product on Product {
-    id
-    title
-    vendor
-    handle
-    descriptionHtml
-    description
-    encodedVariantExistence
-    encodedVariantAvailability
-    options {
-      name
-      optionValues {
-        name
-        firstSelectableVariant {
-          ...ProductVariant
-        }
-        swatch {
-          color
-          image {
-            previewImage {
-              url
-            }
-          }
+const PRODUCT_QUERY = `#graphql
+  query Product($handle: String!) {
+    product(handle: $handle) {
+      id title description handle productType
+      images(first: 3) { nodes { url altText width height } }
+      variants(first: 10) {
+        nodes {
+          id availableForSale
+          title
+          price { amount currencyCode }
+          compareAtPrice { amount currencyCode }
+          selectedOptions { name value }
         }
       }
-    }
-    selectedOrFirstAvailableVariant(selectedOptions: $selectedOptions, ignoreUnknownOptions: true, caseInsensitiveMatch: true) {
-      ...ProductVariant
-    }
-    adjacentVariants (selectedOptions: $selectedOptions) {
-      ...ProductVariant
-    }
-    seo {
-      description
-      title
+      priceRange { minVariantPrice { amount currencyCode } }
     }
   }
-  ${PRODUCT_VARIANT_FRAGMENT}
 `;
-
-const PRODUCT_QUERY = `#graphql
-  query Product(
-    $country: CountryCode
-    $handle: String!
-    $language: LanguageCode
-    $selectedOptions: [SelectedOptionInput!]!
-  ) @inContext(country: $country, language: $language) {
-    product(handle: $handle) {
-      ...Product
-    }
-  }
-  ${PRODUCT_FRAGMENT}
-`;
-
-/** @typedef {import('./+types/products.$handle').Route} Route */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
