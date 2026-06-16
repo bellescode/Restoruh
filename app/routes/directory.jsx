@@ -1,9 +1,9 @@
 /* ============================================================
-   FILE: app/routes/directory.jsx  -- FINAL
-   - Email gate with animated unlock transition
+   FILE: app/routes/directory.jsx -- FINAL v2
    - Static import of Directory component
+   - Email gate with animated unlock transition
    - Cookie-based access persistence
-   - No em dashes
+   - No em dashes, no browser-only storage
    ============================================================ */
 import { Link, Form, useActionData, useNavigation, useLoaderData } from 'react-router';
 import { useState, useEffect } from 'react';
@@ -38,19 +38,113 @@ export async function action({ request, context }) {
         },
       },
     });
+
     const errors = result?.customerCreate?.customerUserErrors ?? [];
     const isOk   = errors.length === 0 || errors.some(e => e.code === 'TAKEN');
-    if (!isOk) return { error: 'Something went wrong. Please try again.' };
+    if (!isOk) {
+      return new Response(
+        JSON.stringify({ error: 'Something went wrong. Please try again.' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Return success data AND set the access cookie
-    const { data } = await import('react-router');
-    return data(
-      { subscribed: true },
-      { headers: { 'Set-Cookie': 'ruh_dir=1; Path=/; Max-Age=31536000; SameSite=Lax' } }
+    // Set cookie and return success -- client handles the animation
+    return new Response(
+      JSON.stringify({ subscribed: true }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Set-Cookie': 'ruh_dir=1; Path=/; Max-Age=31536000; SameSite=Lax',
+        },
+      }
     );
   } catch {
     return { error: 'Unable to subscribe right now. Please try again.' };
   }
+}
+
+/* ---- UNLOCK ANIMATION ------------------------------------ */
+function UnlockAnimation({ onDone }) {
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 100);
+    const t2 = setTimeout(() => setPhase(2), 700);
+    const t3 = setTimeout(() => onDone(), 2600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes riseLeaf  { from{opacity:0;transform:translateY(30px) scale(.7)} to{opacity:1;transform:none} }
+        @keyframes floatRuh  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        @keyframes glowPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+        @keyframes fadeSlide { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
+      `}</style>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'var(--green-deep)',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 28,
+      }}>
+        {/* Floating botanical emojis */}
+        <div style={{ position: 'relative', width: 100, height: 100 }}>
+          {['🌿','🌱','🍃','🌾','🌿'].map((emoji, i) => (
+            <span key={i} style={{
+              position: 'absolute',
+              fontSize: [24,18,28,16,22][i],
+              left: ['50%','15%','75%','5%','85%'][i],
+              top: ['5%','35%','20%','65%','55%'][i],
+              transform: 'translate(-50%,-50%)',
+              opacity: phase >= 1 ? 1 : 0,
+              transition: `opacity .4s ease ${i * 0.1}s`,
+              animation: phase >= 1 ? `floatRuh ${[2.2,1.8,2.5,2.0,2.3][i]}s ease-in-out infinite ${i*0.2}s` : 'none',
+            }}>{emoji}</span>
+          ))}
+          {/* Logo mark */}
+          <img src="/images/restoruh-logo.png" alt="RestoRuh" style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'contain',
+            filter: 'brightness(0) invert(1)',
+            opacity: phase >= 1 ? .85 : 0,
+            transition: 'opacity .6s ease',
+            animation: phase >= 1 ? 'glowPulse 2s ease-in-out infinite' : 'none',
+          }}/>
+        </div>
+
+        {/* Text */}
+        <div style={{
+          textAlign: 'center',
+          opacity: phase >= 2 ? 1 : 0,
+          animation: phase >= 2 ? 'fadeSlide .6s ease both' : 'none',
+        }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 10 }}>
+            WELCOME
+          </p>
+          <p style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 'clamp(20px,4vw,32px)',
+            color: 'var(--cream)', fontWeight: 300, lineHeight: 1.2,
+          }}>
+            Entering the Directory
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--sage)', marginTop: 10, fontStyle: 'italic' }}>
+            The leaves of the tree are for the healing of the nations.
+          </p>
+        </div>
+
+        {/* Gold line */}
+        <div style={{
+          width: 140, height: 1,
+          background: 'linear-gradient(90deg,transparent,var(--gold),transparent)',
+          opacity: phase >= 2 ? 1 : 0,
+          transition: 'opacity .8s ease .3s',
+        }}/>
+      </div>
+    </>
+  );
 }
 
 /* ---- EMAIL GATE ------------------------------------------ */
@@ -60,35 +154,29 @@ function EmailGate({ onUnlocked }) {
   const submitting = navigation.state === 'submitting';
   const [animating, setAnimating] = useState(false);
 
-  // When subscribed, trigger the animated transition
   useEffect(() => {
     if (actionData?.subscribed) {
       setAnimating(true);
-      // After animation completes, reveal directory
-      setTimeout(() => onUnlocked(), 2200);
     }
   }, [actionData?.subscribed]);
 
   if (animating) {
-    return <UnlockAnimation />;
+    return <UnlockAnimation onDone={onUnlocked} />;
   }
 
   return (
-    <div style={{ background: 'var(--cream)', minHeight: '100vh' }}>
-      {/* Header preview */}
+    <div style={{ background: 'var(--cream)', minHeight: '80vh' }}>
+      {/* Hero */}
       <div style={{ background: 'var(--green-deep)', padding: '60px 24px 52px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-          <img src="/images/restoruh-logo.png" alt="RestoRuh"
-            style={{ width: 60, height: 60, objectFit: 'contain', margin: '0 auto 18px', filter: 'brightness(0) invert(1)', opacity: .7 }}/>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 14 }}>
-            FREE RESEARCH PLATFORM
-          </p>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(30px,5vw,54px)', fontWeight: 300, color: 'var(--cream)', lineHeight: 1.08, marginBottom: 16 }}>
+          <img src="/images/restoruh-logo.png" alt="RestoRuh" style={{ width: 58, height: 58, objectFit: 'contain', margin: '0 auto 18px', filter: 'brightness(0) invert(1)', opacity: .7 }}/>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 14 }}>FREE RESEARCH PLATFORM</p>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(28px,5vw,52px)', fontWeight: 300, color: 'var(--cream)', lineHeight: 1.1, marginBottom: 16 }}>
             The RestoRuh Directory
           </h1>
           <p style={{ fontSize: 15, color: 'var(--sage)', lineHeight: 1.75, maxWidth: 500, margin: '0 auto 10px' }}>
             Faith-based wellness research covering 65+ herbs, 11 body systems, family protocols, and more.
-            Free to access. Subscribe to enter and stay in the loop.
+            Subscribe free to enter.
           </p>
           <p style={{ fontSize: 12, color: 'rgba(201,162,74,.7)', fontStyle: 'italic' }}>
             Revelation 22:2 -- the leaves of the tree are for the healing of the nations.
@@ -96,17 +184,15 @@ function EmailGate({ onUnlocked }) {
         </div>
       </div>
 
-      {/* Section preview */}
-      <div className="container" style={{ padding: '44px 24px 0' }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: 'var(--gold)', marginBottom: 20, textAlign: 'center' }}>
-          INSIDE THE DIRECTORY
-        </p>
-        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(230px,1fr))', marginBottom: 44 }}>
+      {/* Sections preview */}
+      <div className="container" style={{ padding: '40px 24px 0' }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, color: 'var(--gold)', marginBottom: 18, textAlign: 'center' }}>INSIDE THE DIRECTORY</p>
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(220px,1fr))', marginBottom: 40 }}>
           {SECTIONS.map(s => (
-            <div key={s.label} style={{ padding: '16px 14px', borderRadius: 12, background: 'var(--paper)', border: '1.5px solid rgba(61,107,80,.1)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{s.icon}</span>
+            <div key={s.label} style={{ padding: '14px 12px', borderRadius: 12, background: 'var(--paper)', border: '1.5px solid rgba(61,107,80,.1)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 17, flexShrink: 0 }}>{s.icon}</span>
               <div>
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 600, color: 'var(--green)', marginBottom: 2 }}>{s.label}</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600, color: 'var(--green)', marginBottom: 2 }}>{s.label}</p>
                 <p style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.5 }}>{s.sub}</p>
               </div>
             </div>
@@ -114,27 +200,28 @@ function EmailGate({ onUnlocked }) {
         </div>
       </div>
 
-      {/* Email gate card */}
-      <div style={{ padding: '0 24px 80px' }}>
-        <div style={{ maxWidth: 500, margin: '0 auto', background: 'var(--green)', borderRadius: 20, padding: '36px 32px', textAlign: 'center' }}>
-          <div style={{ fontSize: 30, marginBottom: 14 }}>🔓</div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px,3vw,28px)', fontWeight: 600, color: 'var(--cream)', marginBottom: 10 }}>
+      {/* Gate */}
+      <div style={{ padding: '0 24px 72px' }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', background: 'var(--green)', borderRadius: 20, padding: '32px 28px', textAlign: 'center' }}>
+          <div style={{ fontSize: 28, marginBottom: 12 }}>🔓</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(18px,3vw,26px)', fontWeight: 600, color: 'var(--cream)', marginBottom: 10 }}>
             Unlock free access
           </h2>
-          <p style={{ fontSize: 14, color: 'var(--sage)', lineHeight: 1.7, marginBottom: 24 }}>
-            Enter your email to unlock the full directory. You will be the first to know when new research, herbs, and products are added.
+          <p style={{ fontSize: 13, color: 'var(--sage)', lineHeight: 1.7, marginBottom: 22 }}>
+            Enter your email to unlock the full directory and stay informed when new research and products launch.
+            Already subscribed? Just enter the same email -- you will go straight in.
           </p>
-          <Form method="post" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Form method="post" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
             <input type="email" name="email" required placeholder="your@email.com"
-              style={{ flex: '1 1 200px', padding: '13px 18px', borderRadius: 999, border: '1.5px solid rgba(201,162,74,.3)', background: 'rgba(255,255,255,.1)', color: 'var(--cream)', fontFamily: 'var(--font-body)', fontSize: 14, outline: 'none' }}/>
-            <button type="submit" className="btn-gold" disabled={submitting} style={{ flexShrink: 0, fontSize: 14 }}>
+              style={{ flex: '1 1 190px', padding: '12px 16px', borderRadius: 999, border: '1.5px solid rgba(201,162,74,.3)', background: 'rgba(255,255,255,.1)', color: 'var(--cream)', fontFamily: 'var(--font-body)', fontSize: 14, outline: 'none' }}/>
+            <button type="submit" className="btn-gold" disabled={submitting} style={{ flexShrink: 0, fontSize: 13 }}>
               {submitting ? 'Unlocking...' : 'Unlock the Directory'}
             </button>
           </Form>
           {actionData?.error && (
             <p style={{ marginTop: 10, fontSize: 12, color: '#f9c0c0' }}>{actionData.error}</p>
           )}
-          <p style={{ marginTop: 14, fontSize: 11, color: 'rgba(138,166,148,.7)' }}>
+          <p style={{ marginTop: 12, fontSize: 11, color: 'rgba(138,166,148,.7)' }}>
             Free forever. No spam. Unsubscribe any time.
           </p>
         </div>
@@ -143,78 +230,16 @@ function EmailGate({ onUnlocked }) {
   );
 }
 
-/* ---- ANIMATED UNLOCK TRANSITION -------------------------- */
-function UnlockAnimation() {
-  const [phase, setPhase] = useState(0);
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), 200);   // leaves start rising
-    const t2 = setTimeout(() => setPhase(2), 900);   // text fades in
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-
-  return (
-    <>
-      <style>{`
-        @keyframes rise { from { opacity:0; transform:translateY(40px) scale(.8); } to { opacity:1; transform:none; } }
-        @keyframes floatLeaf { 0%,100%{transform:translateY(0) rotate(0deg);} 50%{transform:translateY(-12px) rotate(8deg);} }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:none;} }
-        @keyframes glow { 0%,100%{opacity:.5;} 50%{opacity:1;} }
-        .unlock-leaf { animation: floatLeaf 2s ease-in-out infinite; }
-      `}</style>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'var(--green-deep)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 32 }}>
-
-        {/* Botanical leaves rising */}
-        <div style={{ position: 'relative', width: 120, height: 120 }}>
-          {['2.4s', '1.8s', '2.8s', '2.1s', '2.6s'].map((dur, i) => (
-            <span key={i} className="unlock-leaf" style={{
-              position: 'absolute',
-              fontSize: [28,22,32,20,26][i],
-              left: ['50%','20%','70%','10%','80%'][i],
-              top: ['0%','30%','20%','60%','50%'][i],
-              transform: 'translate(-50%,-50%)',
-              animationDelay: `${i * 0.15}s`,
-              animationDuration: dur,
-              opacity: phase >= 1 ? 1 : 0,
-              transition: 'opacity .5s ease',
-            }}>🌿</span>
-          ))}
-          <img
-            src="/images/restoruh-logo.png"
-            alt="RestoRuh"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: phase >= 1 ? .9 : 0, transition: 'opacity .6s ease', animation: 'glow 2s ease-in-out infinite' }}
-          />
-        </div>
-
-        {/* Text */}
-        <div style={{ textAlign: 'center', opacity: phase >= 2 ? 1 : 0, transition: 'opacity .6s ease', animation: phase >= 2 ? 'fadeIn .6s ease both' : 'none' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 4, color: 'var(--gold)', marginBottom: 12 }}>WELCOME</p>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(22px,4vw,36px)', color: 'var(--cream)', fontWeight: 300, lineHeight: 1.2 }}>
-            Entering the Directory
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--sage)', marginTop: 10, fontStyle: 'italic' }}>
-            The leaves of the tree are for the healing of the nations.
-          </p>
-        </div>
-
-        {/* Leaf rule pulse */}
-        <div style={{ width: 160, height: 1, background: 'linear-gradient(90deg,transparent,var(--gold),transparent)', opacity: phase >= 2 ? 1 : 0, transition: 'opacity .8s ease' }}/>
-      </div>
-    </>
-  );
-}
-
 /* ---- PAGE EXPORT ----------------------------------------- */
 export default function DirectoryPage() {
-  const { hasAccess }   = useLoaderData();
+  const { hasAccess }     = useLoaderData();
   const [entered, setEntered] = useState(hasAccess);
 
-  // If they return with cookie, show directory immediately with a subtle fade
   if (entered) {
     return (
       <>
-        <style>{`@keyframes directoryFadeIn{from{opacity:0;}to{opacity:1;}} .dir-root{animation:directoryFadeIn .8s ease both;}`}</style>
-        <div className="dir-root"><Directory /></div>
+        <style>{`.dir-fade-in{animation:dirFade .7s ease both;} @keyframes dirFade{from{opacity:0;}to{opacity:1;}}`}</style>
+        <div className="dir-fade-in"><Directory /></div>
       </>
     );
   }
@@ -222,7 +247,7 @@ export default function DirectoryPage() {
   return <EmailGate onUnlocked={() => setEntered(true)} />;
 }
 
-/* ---- SECTIONS DATA --------------------------------------- */
+/* ---- SECTION PREVIEW DATA -------------------------------- */
 const SECTIONS = [
   { icon: '🌱', label: 'Wellness Guide',          sub: 'Symptom navigator for the whole family' },
   { icon: '🌿', label: 'Herb Library',             sub: '65+ herbs with evidence and safety ratings' },

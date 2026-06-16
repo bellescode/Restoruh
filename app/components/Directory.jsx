@@ -823,6 +823,12 @@ const NAV = [
 /* ==================================================================
    MAIN APP
    ================================================================== */
+
+/* ---- localStorage wrappers for persistent user data -------------- */
+const lsGet    = (key) => { try{ const v=localStorage.getItem(key); return v?{value:v}:null; }catch(_){ return null; } };
+const lsSet    = (key,val) => { try{ localStorage.setItem(key,val); }catch(_){} };
+const lsDelete = (key) => { try{ localStorage.removeItem(key); }catch(_){} };
+
 export default function App(){
   const [user,  setUser]  = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -837,8 +843,14 @@ export default function App(){
   useEffect(()=>{
     (async()=>{
       try{
-        const s=await window.storage.get("restoruh:session");
-        if(s?.value){ const u=JSON.parse(s.value); setUser(u); await loadUserData(u.email); }
+        const s=lsGet("restoruh:session");
+        if(s?.value){ 
+          const u=JSON.parse(s.value); setUser(u); await loadUserData(u.email); 
+        } else {
+          // Auto-create a guest session -- access is already gated at the route level
+          const guest={name:"Member",email:"member@restoruh.com"};
+          setUser(guest); lsSet("restoruh:session",JSON.stringify(guest));
+        }
       }catch(_){}
       setAuthLoaded(true);
     })();
@@ -847,17 +859,17 @@ export default function App(){
   const loadUserData = async (email) => {
     try{
       const fKey=`restoruh:favs:${email}`;
-      const f=await window.storage.get(fKey); if(f?.value) setFavs(JSON.parse(f.value));
+      const f=lsGet(fKey); if(f?.value) setFavs(JSON.parse(f.value));
       const pKey=`restoruh:phases:${email}`;
-      const p=await window.storage.get(pKey); if(p?.value) setPlanPhases(JSON.parse(p.value));
+      const p=lsGet(pKey); if(p?.value) setPlanPhases(JSON.parse(p.value));
     }catch(_){}
   };
 
   const saveFavs = async (next, email) => {
-    try{ await window.storage.set(`restoruh:favs:${email}`,JSON.stringify(next)); }catch(_){}
+    try{ lsSet(`restoruh:favs:${email}`,JSON.stringify(next)); }catch(_){}
   };
   const savePhases = async (next, email) => {
-    try{ await window.storage.set(`restoruh:phases:${email}`,JSON.stringify(next)); }catch(_){}
+    try{ lsSet(`restoruh:phases:${email}`,JSON.stringify(next)); }catch(_){}
   };
 
   const toggleFav = (id) => {
@@ -873,12 +885,12 @@ export default function App(){
 
   const handleLogin = async (u) => {
     setUser(u);
-    try{ await window.storage.set("restoruh:session",JSON.stringify(u)); }catch(_){}
+    try{ lsSet("restoruh:session",JSON.stringify(u)); }catch(_){}
     await loadUserData(u.email);
   };
   const handleLogout = async () => {
     setUser(null); setFavs([]); setPlanPhases({});
-    try{ await window.storage.delete("restoruh:session"); }catch(_){}
+    try{ lsDelete("restoruh:session"); }catch(_){}
     setView({name:"home"});
   };
 
@@ -894,11 +906,11 @@ export default function App(){
     };
   },[query]);
 
-  if(!authLoaded) return <div style={{background:"var(--green)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Leaf size={36} color="var(--gold)"/></div>;
-  if(!user) return <AuthScreen onAuth={handleLogin}/>;
+  // Loading indicator (brief)
+  if(!authLoaded) return <div style={{background:"var(--green-deep)",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><img src="/images/restoruh-logo.png" alt="RestoRuh" style={{width:48,height:48,objectFit:"contain",filter:"brightness(0) invert(1)",opacity:.7}}/></div>;
 
   return(
-    <div style={{background:"var(--cream)",color:"var(--ink)"}} className="min-h-screen font-body">
+    <div style={{background:"var(--cream)",color:"var(--ink)",paddingTop:0}} className="min-h-screen font-body">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&display=swap');
         :root{--green:#3d6b50;--green-deep:#2e5240;--gold:#c9a24a;--gold-soft:#d9bd78;--cream:#f5f0e3;--paper:#fbf8ef;--ink:#243029;--sage:#8aa694;--muted:#6f6a5c;}
@@ -912,11 +924,11 @@ export default function App(){
       `}</style>
 
       {/* HEADER */}
-      <header className="sticky top-0 z-30 border-b" style={{background:"rgba(61,107,80,.97)",borderColor:"rgba(201,162,74,.25)"}}>
+      {false && <header className="ruh-dir-header-hidden" style={{display:"none"}}>
         <div className="mx-auto max-w-6xl px-4 py-3">
           <div className="flex items-center gap-3">
             <button onClick={()=>go({name:"home"})} className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-full overflow-hidden" style={{background:"var(--gold)",padding:2}}><img src="/images/restoruh-logo.png" alt="RestoRuh" style={{width:28,height:28,objectFit:"contain"}}/></span>
+              <span className="grid h-9 w-9 place-items-center rounded-full" style={{background:"var(--gold)"}}><Leaf size={18} color="#2e5240"/></span>
               <span className="text-left">
                 <span className="block font-display text-xl font-600 leading-none" style={{color:"var(--cream)"}}>Resto<span style={{color:"var(--gold)"}}>Ruh</span></span>
                 <span className="block text-[10px] tracking-widest" style={{color:"var(--sage)"}}>HEALING OF THE NATIONS · REVELATION 22:2</span>
@@ -971,7 +983,7 @@ export default function App(){
             {query&&<button onClick={()=>setQuery("")}><X size={16} color="var(--muted)"/></button>}
           </div>
         </div>
-      </header>
+      </header>}
 
       {search?(
         <SearchView results={search} onHerb={(id)=>go({name:"herb",id})} onAil={(id)=>go({name:"ailment",id})} onSys={(id)=>go({name:"system",id})}/>
@@ -1006,7 +1018,7 @@ export default function App(){
             <p className="font-display text-lg italic" style={{color:"var(--gold-soft)"}}>"I am Yahweh Rapha, the Lord who heals you."</p>
             <p className="text-xs tracking-widest" style={{color:"var(--sage)"}}>EXODUS 15:26</p>
             <button onClick={()=>setShowDisc(true)} className="mt-4 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs" style={{borderColor:"rgba(201,162,74,.4)",color:"var(--gold-soft)"}}><ShieldAlert size={14}/> Health disclaimer</button>
-            <p className="mt-2 text-xs" style={{color:"var(--sage)"}}>2025 RestoRuh. Educational use only. Not medical advice.</p>
+            <p className="mt-2 text-xs" style={{color:"var(--sage)"}}>2026 RestoRuh. Educational use only. Not medical advice.</p>
           </div>
         </div>
       </footer>
@@ -1030,10 +1042,10 @@ function AuthScreen({onAuth}){
 
   /* storage helpers -- never throw to the caller */
   const safeGet = async (key) => {
-    try{ const r = await window.storage.get(key); return r?.value ? JSON.parse(r.value) : null; }catch(_){ return null; }
+    try{ const r = lsGet(key); return r?.value ? JSON.parse(r.value) : null; }catch(_){ return null; }
   };
   const safeSet = async (key, val) => {
-    try{ await window.storage.set(key, JSON.stringify(val)); }catch(_){}
+    try{ lsSet(key, JSON.stringify(val)); }catch(_){}
   };
 
   const doSignup = async () => {
@@ -1579,7 +1591,7 @@ function FamilyPlan({user,favs,planPhases,togglePhase,onHerb}){
     (async()=>{
       try{
         const k=`restoruh:plansetup:${user.email}`;
-        const r=await window.storage.get(k);
+        const r=lsGet(k);
         if(r?.value){ const d=JSON.parse(r.value); if(d.family) setFamily(d.family); if(d.focus?.length){ setFocus(d.focus); setActiveArea(d.focus[0]); setStep(3); } }
       }catch(_){}
       setLoaded(true);
@@ -1588,7 +1600,7 @@ function FamilyPlan({user,favs,planPhases,togglePhase,onHerb}){
 
   useEffect(()=>{
     if(!loaded) return;
-    (async()=>{ try{ await window.storage.set(`restoruh:plansetup:${user.email}`,JSON.stringify({family,focus})); }catch(_){} })();
+    (async()=>{ try{ lsSet(`restoruh:plansetup:${user.email}`,JSON.stringify({family,focus})); }catch(_){} })();
   },[family,focus,loaded]);
 
   const savePlan = () => { if(focus.length>0){ setActiveArea(focus[0]); setStep(3); window.scrollTo({top:0}); } };
