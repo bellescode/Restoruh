@@ -2,8 +2,7 @@
    FILE: app/data/wellnessGuideData.js
    Symptom tiles, keyword map, and scoring engine for the
    "How Are You Feeling" wellness guide.
-   No AI dependency -- pure keyword matching and scoring.
-   ============================================================ */
+      ============================================================ */
 
 /* ---- SYMPTOM TILES ----------------------------------------
    Shown as selectable cards. Each tile maps to one or more

@@ -1,8 +1,7 @@
 /* ============================================================
    FILE: app/routes/wellness-guide.jsx  --  /wellness-guide
    Accessible from the main site WITHOUT directory subscription.
-   Multi-step symptom navigator -- no AI, pure keyword scoring.
-   After completing: routes to directory results (gate if needed).
+      After completing: routes to directory results (gate if needed).
    ============================================================ */
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router";
@@ -13,7 +12,7 @@ import { HERBS, AREAS }     from "../data/directoryData";
 
 export const meta = () => [
   { title: "How Are You Feeling -- RestoRuh Wellness Guide" },
-  { name: "description", content: "Tell us how you are feeling and we will guide you to the right herbs and protocols. Faith-based, evidence-backed, no AI." },
+  { name: "description", content: "Tell us how you are feeling and we will guide you to the right herbs and protocols. Faith-based, evidence-backed." },
 ];
 
 /* No loader needed -- fully client-side */
@@ -116,8 +115,7 @@ export default function WellnessGuidePage() {
           How are you feeling?
         </h1>
         <p style={{ fontSize: 15, color: "var(--sage)", maxWidth: 520, margin: "0 auto" }}>
-          Tell us what you are dealing with and we will guide you to the right herbs,
-          areas, and protocols. Faith-based. Evidence-backed. No AI.
+          Select your symptoms or type how you are feeling. We will guide you to the right herbs and protocols.
         </p>
       </div>
 

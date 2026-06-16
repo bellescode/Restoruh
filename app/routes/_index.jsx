@@ -100,7 +100,7 @@ function ProductCategories() {
       <div className="container">
         <p className="section-eyebrow text-center">WHAT WE OFFER</p>
         <h2 className="section-title text-center" style={{ marginBottom:48 }}>Everything your household needs</h2>
-        <div style={{ display:'grid', gap:24, gridTemplateColumns:'repeat(auto-fit, minmax(280px,1fr))' }}>
+        <div style={{ display:'grid', gap:24, gridTemplateColumns:'repeat(auto-fill, minmax(min(100%,280px),1fr))' }}>
           {cats.map(c => (
             <Link key={c.label} to={c.to} className="card-lift" style={{
               display:'flex', flexDirection:'column', gap:12, padding:'40px 32px',
@@ -222,7 +222,7 @@ function DirectoryCallout() {
   return (
     <section className="section" style={{ background:'var(--green)' }}>
       <div className="container">
-        <div style={{ display:'grid', gap:48, gridTemplateColumns:'repeat(auto-fit, minmax(300px,1fr))', alignItems:'center' }}>
+        <div style={{ display:'grid', gap:48, gridTemplateColumns:'repeat(auto-fit, minmax(min(100%,300px),1fr))', alignItems:'center' }}>
           <div>
             <p style={{ fontSize:11, fontWeight:700, letterSpacing:4, color:'var(--gold)', marginBottom:16 }}>FREE TO USE</p>
             <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,48px)', fontWeight:600, color:'var(--cream)', marginBottom:20, lineHeight:1.1 }}>
@@ -277,7 +277,7 @@ function WellnessGuideTeaser() {
         </h2>
         <p style={{ fontSize:15, color:'var(--sage)', lineHeight:1.75, maxWidth:520, margin:'0 auto 32px' }}>
           Select your symptoms or type how you are feeling. We will guide you to the
-          right herbs and protocols.
+          right herbs and protocols -- no account needed, just researched answers.
         </p>
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, justifyContent:'center', marginBottom:32 }}>
           {TILES.map((t) => (

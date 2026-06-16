@@ -17,6 +17,9 @@ export async function action({ request, context }) {
 
   let result;
   switch (cartAction) {
+    case CartForm.ACTIONS.LinesAdd:
+      result = await cart.addLines(inputs.lines);
+      break;
     case CartForm.ACTIONS.LinesRemove:
       result = await cart.removeLines(inputs.lineIds);
       break;
@@ -28,7 +31,10 @@ export async function action({ request, context }) {
   }
 
   const headers = cart.setCartId(result?.cart?.id ?? '');
-  return new Response(null, { status: 200, headers });
+  return new Response(null, {
+    status: 302,
+    headers: { ...Object.fromEntries(headers), Location: '/cart' },
+  });
 }
 
 export const meta = () => [{ title: 'Your Cart  --  RestoRuh' }];
