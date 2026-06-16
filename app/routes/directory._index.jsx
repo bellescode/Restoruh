@@ -10,7 +10,7 @@ import {
   Bug, Dumbbell, BookOpen, Sparkles, ChevronRight,
 } from "lucide-react";
 
-export const meta = () => [{ title: "RestoRuh Directory -- Wellness Research" }];
+export const meta = () => [{ title: "RestoRuh Directory | Wellness Research" }];
 
 export default function DirectoryIndex() {
   const { favs } = useDirectoryContext();

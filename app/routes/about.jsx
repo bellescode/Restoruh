@@ -1,11 +1,11 @@
 /* ============================================================
    FILE: app/routes/about.jsx
-   About page  --  brand story and mission
+   About page  |  brand story and mission
    ============================================================ */
 import { Link } from 'react-router';
 
 export const meta = () => [
-  { title: 'About  --  RestoRuh' },
+  { title: 'About  |  RestoRuh' },
   { name: 'description', content: 'RestoRuh is a faith-rooted herbal wellness brand built on Revelation 22:2. Whole plant teas, powdered blends, and free research for every household.' },
 ];
 
@@ -14,7 +14,7 @@ export default function AboutPage() {
     { icon:'📖', label:'Scripture-Rooted',    desc:'Every protocol, every herb, every product is anchored in the understanding that Yahweh Rapha is the God who heals. The plants are His provision.' },
     { icon:'🔬', label:'Evidence-Based',       desc:'We cite published research. Traditional use is honored, but every claim is traceable to real science and real studies.' },
     { icon:'👨‍👩‍👧‍👦', label:'Family-Centered',       desc:'From 7 months to seniors. Dosing, safety notes, and protocols for the whole household, not just one person.' },
-    { icon:'🌿', label:'Pantry-First',         desc:'Every protocol begins with what you already have  --  ginger, garlic, chamomile. Specialty herbs come later when the foundation is built.' },
+    { icon:'🌿', label:'Pantry-First',         desc:'Every protocol begins with what you already have;  ginger, garlic, chamomile. Specialty herbs come later when the foundation is built.' },
     { icon:'🆓', label:'Education is Free',    desc:'The Directory is free and always will be. The knowledge belongs to every household. Products fund the mission, not the other way around.' },
   ];
 
@@ -47,7 +47,7 @@ export default function AboutPage() {
             and none of them working. The pediatrician said to wait it out. We did not.
           </p>
           <p style={{ fontSize:16, color:'var(--muted)', lineHeight:1.85, marginBottom:20 }}>
-            What followed was months of research  --  published studies, traditional herbalism, the nutritional science
+            What followed was months of research, published studies, traditional herbalism, the nutritional science
             of the gut-skin connection. When we brewed elderberry, stinging nettle, calendula, and ginger for our
             son at 7 months old, the scratching stopped within 24 hours. He slept through the night for the
             first time in weeks.
@@ -56,7 +56,7 @@ export default function AboutPage() {
             That is Little Leaf. That is RestoRuh. What God provides, we steward. What we learn, we share.
           </p>
           <p style={{ fontSize:16, color:'var(--muted)', lineHeight:1.85 }}>
-            The mission is to make that knowledge accessible to every household  --  faith-rooted, evidence-backed,
+            The mission is to make that knowledge accessible to every household;  faith-rooted, evidence-backed,
             family-centered, and starting in your own pantry.
           </p>
         </div>

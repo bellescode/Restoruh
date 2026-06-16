@@ -3,7 +3,7 @@ import { Link }                from "react-router";
 import { DirPage, SectionHeader } from "../components/directory/DirectoryUI";
 import { AILMENTS }             from "../data/directoryData";
 
-export const meta = () => [{ title: "Ailments -- RestoRuh Directory" }];
+export const meta = () => [{ title: "Ailments | RestoRuh Directory" }];
 
 export default function AilmentsIndex() {
   const cats = [...new Set(AILMENTS.map((a) => a.cat))];

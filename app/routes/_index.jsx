@@ -277,7 +277,7 @@ function WellnessGuideTeaser() {
         </h2>
         <p style={{ fontSize:15, color:'var(--sage)', lineHeight:1.75, maxWidth:520, margin:'0 auto 32px' }}>
           Select your symptoms or type how you are feeling. We will guide you to the
-          right herbs and protocols -- no account needed, no AI, just researched answers.
+          right herbs and protocols.
         </p>
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, justifyContent:'center', marginBottom:32 }}>
           {TILES.map((t) => (
