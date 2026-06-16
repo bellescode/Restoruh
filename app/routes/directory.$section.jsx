@@ -1,13 +1,21 @@
 /* ============================================================
    FILE: app/routes/directory.$section.jsx
-   Renders at /directory/:section
-   Examples: /directory/herbs, /directory/gut-health,
-             /directory/family-plan, /directory/systems
+   Handles /directory/:section -- all sub-pages.
+   Self-contained: cookie check, sub-nav, Directory component.
+   No layout nesting. Root.jsx handles header/footer.
    ============================================================ */
-import { useParams, useSearchParams } from 'react-router';
+import { redirect, useLoaderData, useParams, useSearchParams } from 'react-router';
 import Directory from '../components/Directory';
+import { DirectorySubNav } from './directory';
 
-/* Map URL slugs to the directory's internal view names */
+export async function loader({ request }) {
+  const cookie = request.headers.get('Cookie') ?? '';
+  if (!cookie.includes('ruh_dir=1')) {
+    return redirect('/directory');
+  }
+  return { hasAccess: true };
+}
+
 const SLUG_TO_SECTION = {
   'herbs':        'herbs',
   'systems':      'systems',
@@ -23,13 +31,17 @@ const SLUG_TO_SECTION = {
   'prepared':     'prepared',
 };
 
-export default function DirectorySection() {
-  const { section }   = useParams();
-  const [sp]          = useSearchParams();
-  const id            = sp.get('id') || undefined;
-  const viewOverride  = sp.get('view');  // e.g. ?view=master-blend
-
+export default function DirectorySectionPage() {
+  const { section }  = useParams();
+  const [sp]         = useSearchParams();
+  const id           = sp.get('id') || undefined;
+  const viewOverride = sp.get('view');
   const initialSection = viewOverride || SLUG_TO_SECTION[section] || section;
 
-  return <Directory initialSection={initialSection} initialId={id} />;
+  return (
+    <>
+      <DirectorySubNav />
+      <Directory initialSection={initialSection} initialId={id} />
+    </>
+  );
 }
