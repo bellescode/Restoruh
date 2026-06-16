@@ -1,126 +1,168 @@
-import {useLoaderData, data} from 'react-router';
-import {CartForm} from '@shopify/hydrogen';
-import {CartMain} from '~/components/CartMain';
+/* ============================================================
+   FILE: app/routes/cart.jsx
+   Shopify-connected cart page
+   ============================================================ */
+import { useLoaderData, Link } from 'react-router';
+import { CartForm, Image, Money } from '@shopify/hydrogen';
 
-/**
- * @type {Route.MetaFunction}
- */
-export const meta = () => {
-  return [{title: `Hydrogen | Cart`}];
-};
+export async function loader({ context }) {
+  const cart = await context.cart.get();
+  return { cart };
+}
 
-/**
- * @type {HeadersFunction}
- */
-export const headers = ({actionHeaders}) => actionHeaders;
+export async function action({ request, context }) {
+  const { cart } = context;
+  const formData  = await request.formData();
+  const { action: cartAction, inputs } = CartForm.getFormInput(formData);
 
-/**
- * @param {Route.ActionArgs}
- */
-export async function action({request, context}) {
-  const {cart} = context;
-
-  const formData = await request.formData();
-
-  const {action, inputs} = CartForm.getFormInput(formData);
-
-  if (!action) {
-    throw new Error('No action provided');
-  }
-
-  let status = 200;
   let result;
-
-  switch (action) {
-    case CartForm.ACTIONS.LinesAdd:
-      result = await cart.addLines(inputs.lines);
+  switch (cartAction) {
+    case CartForm.ACTIONS.LinesRemove:
+      result = await cart.removeLines(inputs.lineIds);
       break;
     case CartForm.ACTIONS.LinesUpdate:
       result = await cart.updateLines(inputs.lines);
       break;
-    case CartForm.ACTIONS.LinesRemove:
-      result = await cart.removeLines(inputs.lineIds);
-      break;
-    case CartForm.ACTIONS.DiscountCodesUpdate: {
-      const formDiscountCode = inputs.discountCode;
-
-      // User inputted discount code
-      const discountCodes = formDiscountCode ? [formDiscountCode] : [];
-
-      // Combine discount codes already applied on cart
-      discountCodes.push(...inputs.discountCodes);
-
-      result = await cart.updateDiscountCodes(discountCodes);
-      break;
-    }
-    case CartForm.ACTIONS.GiftCardCodesAdd: {
-      const formGiftCardCode = inputs.giftCardCode;
-
-      const giftCardCodes = formGiftCardCode ? [formGiftCardCode] : [];
-
-      result = await cart.addGiftCardCodes(giftCardCodes);
-      break;
-    }
-    case CartForm.ACTIONS.GiftCardCodesRemove: {
-      const appliedGiftCardIds = inputs.giftCardCodes;
-      result = await cart.removeGiftCardCodes(appliedGiftCardIds);
-      break;
-    }
-    case CartForm.ACTIONS.BuyerIdentityUpdate: {
-      result = await cart.updateBuyerIdentity({
-        ...inputs.buyerIdentity,
-      });
-      break;
-    }
     default:
-      throw new Error(`${action} cart action is not defined`);
+      throw new Error(`Unhandled cart action: ${cartAction}`);
   }
 
-  const cartId = result?.cart?.id;
-  const headers = cartId ? cart.setCartId(result.cart.id) : new Headers();
-  const {cart: cartResult, errors, warnings} = result;
-
-  const redirectTo = formData.get('redirectTo') ?? null;
-  if (typeof redirectTo === 'string') {
-    status = 303;
-    headers.set('Location', redirectTo);
-  }
-
-  return data(
-    {
-      cart: cartResult,
-      errors,
-      warnings,
-      analytics: {
-        cartId,
-      },
-    },
-    {status, headers},
-  );
+  const headers = cart.setCartId(result?.cart?.id ?? '');
+  return new Response(null, { status: 200, headers });
 }
 
-/**
- * @param {Route.LoaderArgs}
- */
-export async function loader({context}) {
-  const {cart} = context;
-  return await cart.get();
-}
+export const meta = () => [{ title: 'Your Cart | RestoRuh' }];
 
-export default function Cart() {
-  /** @type {LoaderReturnData} */
-  const cart = useLoaderData();
+function CartLine({ line }) {
+  const { merchandise, quantity, cost } = line;
+  const image = merchandise?.image;
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
-      <CartMain layout="page" cart={cart} />
+    <div style={{
+      display: 'flex', gap: 20, alignItems: 'flex-start',
+      padding: '24px 0', borderBottom: '1px solid rgba(61,107,80,.1)'
+    }}>
+      {/* Image */}
+      <div style={{ width: 90, height: 90, borderRadius: 12, overflow: 'hidden', background: 'rgba(61,107,80,.06)', flexShrink: 0, display:'grid', placeItems:'center' }}>
+        {image
+          ? <Image data={image} width={90} height={90} style={{ objectFit:'cover' }}/>
+          : <img src="/images/restoruh-logo.png" alt="" style={{ width:40, height:40, objectFit:'contain', opacity:.2 }}/>
+        }
+      </div>
+
+      {/* Details */}
+      <div style={{ flex: 1 }}>
+        <p style={{ fontFamily:'var(--font-display)', fontSize:18, fontWeight:600, color:'var(--green)', marginBottom:4 }}>
+          {merchandise?.product?.title}
+        </p>
+        {merchandise?.title !== 'Default Title' && (
+          <p style={{ fontSize:13, color:'var(--muted)', marginBottom:8 }}>{merchandise.title}</p>
+        )}
+        <span className="badge-soon">Pre-Order</span>
+      </div>
+
+      {/* Price + qty + remove */}
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        {cost?.totalAmount && (
+          <p style={{ fontFamily:'var(--font-display)', fontSize:20, fontWeight:600, color:'var(--green)', marginBottom:8 }}>
+            <Money data={cost.totalAmount}/>
+          </p>
+        )}
+
+        {/* Update quantity */}
+        <div style={{ display:'flex', alignItems:'center', gap:8, justifyContent:'flex-end', marginBottom:8 }}>
+          <CartForm route="/cart" action={CartForm.ACTIONS.LinesUpdate}
+            inputs={{ lines:[{ id:line.id, quantity: Math.max(0, quantity-1) }] }}>
+            <button style={{ width:28, height:28, borderRadius:'50%', background:'rgba(61,107,80,.1)', color:'var(--green)', fontWeight:700, border:'none', cursor:'pointer', fontSize:16 }}>−</button>
+          </CartForm>
+          <span style={{ fontWeight:600, color:'var(--ink)', minWidth:24, textAlign:'center' }}>{quantity}</span>
+          <CartForm route="/cart" action={CartForm.ACTIONS.LinesUpdate}
+            inputs={{ lines:[{ id:line.id, quantity: quantity+1 }] }}>
+            <button style={{ width:28, height:28, borderRadius:'50%', background:'rgba(61,107,80,.1)', color:'var(--green)', fontWeight:700, border:'none', cursor:'pointer', fontSize:16 }}>+</button>
+          </CartForm>
+        </div>
+
+        {/* Remove */}
+        <CartForm route="/cart" action={CartForm.ACTIONS.LinesRemove}
+          inputs={{ lineIds:[line.id] }}>
+          <button style={{ background:'none', border:'none', fontSize:12, color:'var(--muted)', cursor:'pointer', textDecoration:'underline' }}>
+            Remove
+          </button>
+        </CartForm>
+      </div>
     </div>
   );
 }
 
-/** @typedef {import('react-router').HeadersFunction} HeadersFunction */
-/** @typedef {import('./+types/cart').Route} Route */
-/** @typedef {import('@shopify/hydrogen').CartQueryDataReturn} CartQueryDataReturn */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof loader>} LoaderReturnData */
-/** @typedef {import('@shopify/remix-oxygen').SerializeFrom<typeof action>} ActionReturnData */
+export default function CartPage() {
+  const { cart } = useLoaderData();
+  const lines     = cart?.lines?.nodes ?? [];
+  const total     = cart?.cost?.totalAmount;
+  const checkoutUrl = cart?.checkoutUrl;
+
+  if (lines.length === 0) {
+    return (
+      <div style={{ background:'var(--cream)', minHeight:'70vh', display:'grid', placeItems:'center' }}>
+        <div style={{ textAlign:'center', padding:40 }}>
+          <img src="/images/restoruh-logo.png" alt="" style={{ width:64, height:64, objectFit:'contain', margin:'0 auto 24px', opacity:.2 }}/>
+          <h2 style={{ fontFamily:'var(--font-display)', fontSize:28, color:'var(--green)', marginBottom:12 }}>Your cart is empty</h2>
+          <p style={{ color:'var(--muted)', marginBottom:28 }}>Add some teas or blends to get started.</p>
+          <Link to="/shop" className="btn-gold">Browse the Shop</Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background:'var(--cream)', minHeight:'70vh' }}>
+      <div className="container" style={{ padding:'48px 24px 80px' }}>
+        <h1 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(28px,4vw,42px)', fontWeight:600, color:'var(--green)', marginBottom:8 }}>
+          Your Cart
+        </h1>
+        <p style={{ color:'var(--muted)', marginBottom:40 }}>
+          These are pre-order items. We will fulfill when products are ready.
+        </p>
+
+        <div style={{ display:'grid', gap:32, gridTemplateColumns:'1fr min(360px, 100%)' }}>
+          {/* Line items */}
+          <div>
+            {lines.map(line => <CartLine key={line.id} line={line}/>)}
+          </div>
+
+          {/* Summary */}
+          <div style={{ background:'var(--paper)', borderRadius:20, padding:28, border:'1.5px solid rgba(61,107,80,.12)', alignSelf:'start' }}>
+            <h2 style={{ fontFamily:'var(--font-display)', fontSize:22, fontWeight:600, color:'var(--green)', marginBottom:20 }}>
+              Order Summary
+            </h2>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:20 }}>
+              <span style={{ color:'var(--muted)' }}>Subtotal</span>
+              {total && <span style={{ fontWeight:700, color:'var(--green)' }}><Money data={total}/></span>}
+            </div>
+            <p style={{ fontSize:12, color:'var(--muted)', marginBottom:20, lineHeight:1.6 }}>
+              Shipping calculated at checkout. Pre-orders ship when products are available.
+            </p>
+            <div className="leaf-rule" style={{ marginBottom:20 }}/>
+            {checkoutUrl && (
+              <a
+                href={checkoutUrl}
+                className="btn-gold"
+                style={{ width:'100%', justifyContent:'center', padding:'16px', fontSize:16, display:'flex' }}
+              >
+                Proceed to Checkout
+              </a>
+            )}
+            <Link to="/shop" style={{ display:'block', textAlign:'center', marginTop:14, fontSize:13, color:'var(--muted)', textDecoration:'none' }}>
+              Continue Shopping
+            </Link>
+          </div>
+        </div>
+
+        {/* FDA note */}
+        <p style={{ fontSize:11, color:'var(--muted)', marginTop:40, lineHeight:1.7, maxWidth:600 }}>
+          These statements have not been evaluated by the Food and Drug Administration.
+          These products are not intended to diagnose, treat, cure, or prevent any disease.
+        </p>
+      </div>
+    </div>
+  );
+}
