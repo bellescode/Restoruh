@@ -49,7 +49,12 @@ function SiteHeader({ cart }) {
             <Link to="/shop"      className="nav-link">Shop</Link>
             <Link to="/about"     className="nav-link">About</Link>
             <Link to="/directory" className="nav-link-directory">Directory</Link>
-            <Link to="/cart"      className="nav-link" style={{ marginLeft: 8 }}>
+            <Link to="/account"   className="nav-link" aria-label="Account" style={{ padding:'7px 10px' }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4"/><path d="M5 20v-1a7 7 0 0114 0v1"/>
+              </svg>
+            </Link>
+            <Link to="/cart"      className="nav-link" style={{ marginLeft: 4 }}>
               Cart{qty}
             </Link>
           </nav>
