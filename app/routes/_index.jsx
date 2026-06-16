@@ -253,6 +253,56 @@ function DirectoryCallout() {
   );
 }
 
+/* --- HOW ARE YOU FEELING  ----------------------------------- */
+function WellnessGuideTeaser() {
+  const TILES = [
+    { emoji:'😴', label:'Tired' },
+    { emoji:'💧', label:'Swelling' },
+    { emoji:'🫃', label:'Digestion' },
+    { emoji:'🔥', label:'Inflammation' },
+    { emoji:'🌙', label:'Hormonal' },
+    { emoji:'🧠', label:'Mood / Anxiety' },
+    { emoji:'🛡️', label:'Immunity' },
+    { emoji:'✨', label:'Skin or Hair' },
+    { emoji:'💆', label:'Hair Loss' },
+  ];
+  return (
+    <section style={{ padding:'72px 24px', background:'var(--green-deep)' }}>
+      <div className="container" style={{ maxWidth:760, textAlign:'center' }}>
+        <p style={{ fontSize:11, fontWeight:700, letterSpacing:4, color:'var(--gold)', marginBottom:14 }}>
+          RESTORUH WELLNESS GUIDE
+        </p>
+        <h2 style={{ fontFamily:'var(--font-display)', fontSize:'clamp(26px,4vw,44px)', fontWeight:300, color:'var(--cream)', lineHeight:1.15, marginBottom:14 }}>
+          How are you feeling?
+        </h2>
+        <p style={{ fontSize:15, color:'var(--sage)', lineHeight:1.75, maxWidth:520, margin:'0 auto 32px' }}>
+          Select your symptoms or type how you are feeling. We will guide you to the
+          right herbs and protocols -- no account needed, no AI, just researched answers.
+        </p>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:10, justifyContent:'center', marginBottom:32 }}>
+          {TILES.map((t) => (
+            <Link key={t.label} to={`/wellness-guide`}
+              style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:999,
+                background:'rgba(245,240,227,.1)', border:'1px solid rgba(201,162,74,.2)',
+                color:'var(--cream)', textDecoration:'none', fontSize:13, fontWeight:500,
+                transition:'background .15s ease' }}
+              onMouseEnter={(e)=>e.currentTarget.style.background='rgba(201,162,74,.2)'}
+              onMouseLeave={(e)=>e.currentTarget.style.background='rgba(245,240,227,.1)'}>
+              <span style={{ fontSize:16 }}>{t.emoji}</span> {t.label}
+            </Link>
+          ))}
+        </div>
+        <Link to="/wellness-guide" className="btn-gold" style={{ fontSize:15, padding:'14px 32px' }}>
+          Find my starting point
+        </Link>
+        <p style={{ marginTop:16, fontSize:12, color:'rgba(138,166,148,.7)', fontStyle:'italic' }}>
+          Already in the directory? Your results link straight in.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /* --- NEWSLETTER  --  connected to Shopify ------------------- */
 function Newsletter() {
   const actionData = useActionData();
@@ -310,6 +360,7 @@ export default function Homepage() {
       <TeaPreview   teas={teas}/>
       <BlendPreview blends={blends}/>
       <DirectoryCallout/>
+      <WellnessGuideTeaser/>
       <Newsletter/>
     </>
   );
