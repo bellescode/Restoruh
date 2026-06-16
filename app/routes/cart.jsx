@@ -31,7 +31,7 @@ export async function action({ request, context }) {
   return new Response(null, { status: 200, headers });
 }
 
-export const meta = () => [{ title: 'Your Cart | RestoRuh' }];
+export const meta = () => [{ title: 'Your Cart  --  RestoRuh' }];
 
 function CartLine({ line }) {
   const { merchandise, quantity, cost } = line;

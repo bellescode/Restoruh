@@ -7,7 +7,7 @@ import { Image, Money } from '@shopify/hydrogen';
 import { useState } from 'react';
 
 export const meta = () => [
-  { title: 'Shop — RestoRuh' },
+  { title: 'Shop  --  RestoRuh' },
   { name: 'description', content: 'Organic loose leaf teas and powdered herbal blends from RestoRuh.' },
 ];
 

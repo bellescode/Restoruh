@@ -20,7 +20,7 @@ export async function loader({ params, context }) {
 
 export function meta({ data }) {
   return [
-    { title: `${data?.product?.title ?? 'Product'} — RestoRuh` },
+    { title: `${data?.product?.title ?? 'Product'}  --  RestoRuh` },
     { name: 'description', content: data?.product?.description ?? '' },
   ];
 }
@@ -85,7 +85,7 @@ export default function ProductPage() {
                   style={{ width: '100%', justifyContent: 'center', padding: '16px 32px', fontSize: 16 }}
                   disabled={!selectedVariant.availableForSale}
                 >
-                  {selectedVariant.availableForSale ? 'Pre-Order — Add to Cart' : 'Sold Out'}
+                  {selectedVariant.availableForSale ? 'Pre-Order  --  Add to Cart' : 'Sold Out'}
                 </button>
               </CartForm>
             )}

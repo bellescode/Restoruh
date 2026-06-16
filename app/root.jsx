@@ -29,7 +29,7 @@ function SiteHeader({ cart }) {
       <div className="container">
         <div className="header-inner">
 
-          {/* LOGO — rR mark in a cream circle on the dark header */}
+          {/* LOGO  --  rR mark in a cream circle on the dark header */}
           <Link to="/" className="header-logo">
             <span className="logo-mark">
               <img
@@ -44,7 +44,7 @@ function SiteHeader({ cart }) {
             </div>
           </Link>
 
-          {/* Desktop nav — no item is permanently highlighted */}
+          {/* Desktop nav  --  no item is permanently highlighted */}
           <nav className="header-nav">
             <Link to="/shop"      className="nav-link">Shop</Link>
             <Link to="/about"     className="nav-link">About</Link>

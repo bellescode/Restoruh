@@ -1,5 +1,5 @@
 /* ============================================================
-   FILE: app/routes/_index.jsx — v2
+   FILE: app/routes/_index.jsx  --  v2
    Adds working email signup with Shopify customer creation
    ============================================================ */
 import { useLoaderData, useActionData, useNavigation, Link, Form } from 'react-router';
@@ -19,7 +19,7 @@ export async function loader({ context }) {
   return { teas, blends };
 }
 
-// Server action — subscribes email to Shopify marketing
+// Server action  --  subscribes email to Shopify marketing
 export async function action({ request, context }) {
   const formData = await request.formData();
   const email    = String(formData.get('email') ?? '').trim();
@@ -34,7 +34,7 @@ export async function action({ request, context }) {
         input: {
           email,
           acceptsMarketing: true,
-          // Password required by Shopify — use a placeholder so they're stored
+          // Password required by Shopify  --  use a placeholder so they're stored
           // as a customer with email marketing enabled
           password: `RUH${Math.random().toString(36).slice(2,10).toUpperCase()}!`,
         },
@@ -43,7 +43,7 @@ export async function action({ request, context }) {
 
     const errors = result?.customerCreate?.customerUserErrors ?? [];
 
-    // Email already exists — still a success for the subscriber
+    // Email already exists  --  still a success for the subscriber
     if (errors.some(e => e.code === 'TAKEN')) {
       return { success: true };
     }
@@ -253,7 +253,7 @@ function DirectoryCallout() {
   );
 }
 
-/* --- NEWSLETTER — connected to Shopify ------------------- */
+/* --- NEWSLETTER  --  connected to Shopify ------------------- */
 function Newsletter() {
   const actionData = useActionData();
   const navigation = useNavigation();
